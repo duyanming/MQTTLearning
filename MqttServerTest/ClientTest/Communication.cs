@@ -1,5 +1,6 @@
 ﻿using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Client.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,9 +83,9 @@ namespace Test.Communication
                 var factory = new MqttFactory();
                 mqttClient = factory.CreateMqttClient();
 
-                mqttClient.ApplicationMessageReceived += MqttClient_ApplicationMessageReceived;
-                mqttClient.Connected += MqttClient_Connected;
-                mqttClient.Disconnected += MqttClient_Disconnected;
+                mqttClient.UseApplicationMessageReceivedHandler(MqttClient_ApplicationMessageReceived);
+                mqttClient.UseConnectedHandler( MqttClient_Connected);
+                mqttClient.UseDisconnectedHandler(MqttClient_Disconnected);
             }
 
             //非托管客户端
@@ -118,12 +119,12 @@ namespace Test.Communication
             }
         }
 
-        private void MqttClient_Connected(object sender, EventArgs e)
+        private void MqttClient_Connected( EventArgs e)
         {
             FlagMsg = ("已连接到MQTT服务器！" + Environment.NewLine);
         }
 
-        private async void MqttClient_Disconnected(object sender, EventArgs e)
+        private async void MqttClient_Disconnected(EventArgs e)
         {
             DateTime curTime = new DateTime();
             curTime = DateTime.UtcNow;
@@ -158,7 +159,7 @@ namespace Test.Communication
             }
         }
 
-        private void MqttClient_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private void MqttClient_ApplicationMessageReceived(MqttApplicationMessageReceivedEventArgs e)
         {
             ReceiveMsg = ($">> {"### RECEIVED APPLICATION MESSAGE ###"}{Environment.NewLine}");
             ReceiveMsg += ($">> Topic = {e.ApplicationMessage.Topic}{Environment.NewLine}");

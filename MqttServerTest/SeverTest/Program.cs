@@ -1,4 +1,6 @@
 ﻿using MQTTnet;
+using MQTTnet.Client.Connecting;
+using MQTTnet.Client.Disconnecting;
 using MQTTnet.Diagnostics;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
@@ -19,7 +21,7 @@ namespace MqttServerTest
 
         static void Main(string[] args)
         {
-            Task.Run(async () => { await StartMqttServer_2_7_5(); });
+            Task.Run(async () => { await StartMqttServer(); });
 
             // Write all trace messages to the console window.
             MqttNetGlobalLogger.LogMessagePublished += MqttNetTrace_TraceMessagePublished;
@@ -40,13 +42,13 @@ namespace MqttServerTest
 
                 if (inputString == "exit")
                 {
-                    Task.Run(async () => { await EndMqttServer_2_7_5(); });
+                    Task.Run(async () => { await EndMqttServer(); });
                     Console.WriteLine("MQTT服务已停止！");
                     break;
                 }
                 else if (inputString == "clients")
                 {
-                    var connectedClients = mqttServer.GetConnectedClientsAsync();
+                    var connectedClients = mqttServer.GetClientStatusAsync();
 
                     Console.WriteLine($"客户端标识：");
                     //2.4.0
@@ -89,19 +91,19 @@ namespace MqttServerTest
             }
         }
 
-        private static void MqttServer_ClientConnected(object sender, MqttClientConnectedEventArgs e)
+        private static void MqttServer_ClientConnected(MqttServerClientConnectedEventArgs e)
         {
-            Console.WriteLine($"客户端[{e.Client.ClientId}]已连接，协议版本：{e.Client.ProtocolVersion}");
-            connectedClientId.Add(e.Client.ClientId);
+            Console.WriteLine($"客户端[{e.ClientId}]已连接，协议版本：{e.ClientId}");
+            connectedClientId.Add(e.ClientId);
         }
 
-        private static void MqttServer_ClientDisconnected(object sender, MqttClientDisconnectedEventArgs e)
+        private static void MqttServer_ClientDisconnected(MqttServerClientDisconnectedEventArgs e)
         {
-            Console.WriteLine($"客户端[{e.Client.ClientId}]已断开连接！");
-            connectedClientId.Remove(e.Client.ClientId);
+            Console.WriteLine($"客户端[{e.ClientId}]已断开连接！");
+            connectedClientId.Remove(e.ClientId);
         }
 
-        private static void MqttServer_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private static void MqttServer_ApplicationMessageReceived( MqttApplicationMessageReceivedEventArgs e)
         {
             string recv = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
             Console.WriteLine("### RECEIVED APPLICATION MESSAGE ###");
@@ -128,9 +130,9 @@ namespace MqttServerTest
             Console.WriteLine(trace);
         }
 
-        #region 2.7.5
+        #region 3.0.8
 
-        private static async Task StartMqttServer_2_7_5()
+        private static async Task StartMqttServer()
         {
             if (mqttServer == null)
             {
@@ -138,22 +140,44 @@ namespace MqttServerTest
                 var optionsBuilder = new MqttServerOptionsBuilder()
                     .WithConnectionBacklog(100)
                     .WithDefaultEndpointPort(8222)
-                    .WithConnectionValidator(ValidatingMqttClients())
-                    ;
+                    .WithConnectionValidator(c =>
+                    {
+                        Dictionary<string, string> c_u = new Dictionary<string, string>();
+                        c_u.Add("client001", "username001");
+                        c_u.Add("client002", "username002");
+                        Dictionary<string, string> u_psw = new Dictionary<string, string>();
+                        u_psw.Add("username001", "psw001");
+                        u_psw.Add("username002", "psw002");
+
+                        if (c_u.ContainsKey(c.ClientId) && c_u[c.ClientId] == c.Username)
+                        {
+                            if (u_psw.ContainsKey(c.Username) && u_psw[c.Username] == c.Password)
+                            {
+                                c.ReturnCode = MqttConnectReturnCode.ConnectionAccepted;
+                            }
+                            else
+                            {
+                                c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedBadUsernameOrPassword;
+                            }
+                        }
+                        else
+                        {
+                            c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedIdentifierRejected;
+                        }
+                    })                    ;
 
                 // Start a MQTT server.
                 mqttServer = new MqttFactory().CreateMqttServer();
-                mqttServer.ApplicationMessageReceived += MqttServer_ApplicationMessageReceived;
-                mqttServer.ClientConnected += MqttServer_ClientConnected;
-                mqttServer.ClientDisconnected += MqttServer_ClientDisconnected;
+                mqttServer.UseApplicationMessageReceivedHandler( MqttServer_ApplicationMessageReceived);
+                mqttServer.UseClientConnectedHandler(MqttServer_ClientConnected);
+                mqttServer.UseClientDisconnectedHandler( MqttServer_ClientDisconnected);
 
-                Task.Run(async () => { await mqttServer.StartAsync(optionsBuilder.Build()); });
-                //mqttServer.StartAsync(optionsBuilder.Build());
+                _ = mqttServer.StartAsync(optionsBuilder.Build());
                 Console.WriteLine("MQTT服务启动成功！");
             }
         }
 
-        private static async Task EndMqttServer_2_7_5()
+        private static async Task EndMqttServer()
         {
             if (mqttServer!=null)
             {
@@ -163,38 +187,6 @@ namespace MqttServerTest
             {
                 Console.WriteLine("mqttserver=null");
             }
-        }
-
-        private static Action<MqttConnectionValidatorContext> ValidatingMqttClients()
-        {
-            // Setup client validator.    
-            var options =new MqttServerOptions();
-            options.ConnectionValidator = c =>
-            {
-                Dictionary<string, string> c_u = new Dictionary<string, string>();
-                c_u.Add("client001", "username001");
-                c_u.Add("client002", "username002");
-                Dictionary<string, string> u_psw = new Dictionary<string, string>();
-                u_psw.Add("username001", "psw001");
-                u_psw.Add("username002", "psw002");
-
-                if (c_u.ContainsKey(c.ClientId) && c_u[c.ClientId] == c.Username)
-                {
-                    if (u_psw.ContainsKey(c.Username) && u_psw[c.Username] == c.Password)
-                    {
-                        c.ReturnCode = MqttConnectReturnCode.ConnectionAccepted;
-                    }
-                    else
-                    {
-                        c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedBadUsernameOrPassword;
-                    }
-                }
-                else
-                {
-                    c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedIdentifierRejected;
-                }
-            };
-            return options.ConnectionValidator;
         }
         
         private static void Usingcertificate(ref MqttServerOptions options)

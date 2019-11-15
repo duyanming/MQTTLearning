@@ -1,1 +1,0 @@
-G:\mission\CSharpLearning\MQTTLearning\MqttServerTest\SeverTest\bin\Release\SeverTest.exe.config

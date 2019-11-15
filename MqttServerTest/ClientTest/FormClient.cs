@@ -3,8 +3,8 @@
 
 using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Client.Options;
 using MQTTnet.Implementations;
-using MQTTnet.ManagedClient;
 using MQTTnet.Protocol;
 using System;
 using System.Collections.Generic;
@@ -124,9 +124,9 @@ namespace MqttServerTest
                 var factory = new MqttFactory();
                 mqttClient = factory.CreateMqttClient();
 
-                mqttClient.ApplicationMessageReceived += MqttClient_ApplicationMessageReceived;
-                mqttClient.Connected += MqttClient_Connected;
-                mqttClient.Disconnected += MqttClient_Disconnected;
+                mqttClient.UseApplicationMessageReceivedHandler(MqttClient_ApplicationMessageReceived);
+                mqttClient.UseConnectedHandler(MqttClient_Connected);
+                mqttClient.UseDisconnectedHandler( MqttClient_Disconnected);
             }
 
             //非托管客户端
@@ -215,7 +215,7 @@ namespace MqttServerTest
             }
         }
 
-        private void MqttClient_Connected(object sender, EventArgs e)
+        private void MqttClient_Connected( EventArgs e)
         {
             Invoke((new Action(() =>
             {
@@ -224,7 +224,7 @@ namespace MqttServerTest
             })));
         }
 
-        private void MqttClient_Disconnected(object sender, EventArgs e)
+        private void MqttClient_Disconnected(EventArgs e)
         {
             Invoke((new Action(() =>
             {
@@ -271,8 +271,7 @@ namespace MqttServerTest
                 })));
             }
         }
-
-        private void MqttClient_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private void MqttClient_ApplicationMessageReceived(MqttApplicationMessageReceivedEventArgs e)
         {
             Invoke((new Action(() =>
             {
