@@ -31,7 +31,7 @@ namespace MqttServerTest
             //new Thread(StartMqttServer).Start();
             while (true)
             {
-                if (mqttServer==null)
+                if (mqttServer == null)
                 {
                     Console.WriteLine("Please await mqttServer.StartAsync()");
                     Thread.Sleep(1000);
@@ -67,7 +67,7 @@ namespace MqttServerTest
                     string msg = inputString.Substring(8);
                     Topic_Host_Control(msg);
                 }
-                else if(inputString.StartsWith("serialize:"))
+                else if (inputString.StartsWith("serialize:"))
                 {
                     AllData data = new AllData();
                     data.m_data = new EquipmentDataJson();
@@ -103,7 +103,7 @@ namespace MqttServerTest
             connectedClientId.Remove(e.ClientId);
         }
 
-        private static void MqttServer_ApplicationMessageReceived( MqttApplicationMessageReceivedEventArgs e)
+        private static void MqttServer_ApplicationMessageReceived(MqttApplicationMessageReceivedEventArgs e)
         {
             string recv = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
             Console.WriteLine("### RECEIVED APPLICATION MESSAGE ###");
@@ -113,7 +113,7 @@ namespace MqttServerTest
             Console.WriteLine($"+ QoS = {e.ApplicationMessage.QualityOfServiceLevel}");
             Console.WriteLine($"+ Retain = {e.ApplicationMessage.Retain}");
             Console.WriteLine();
-            if (e.ApplicationMessage.Topic== "slave/json")
+            if (e.ApplicationMessage.Topic == "slave/json")
             {
                 JsonData(recv);
             }
@@ -153,33 +153,33 @@ namespace MqttServerTest
                         {
                             if (u_psw.ContainsKey(c.Username) && u_psw[c.Username] == c.Password)
                             {
-                                c.ReturnCode = MqttConnectReturnCode.ConnectionAccepted;
+                                c.ReasonCode = MqttConnectReasonCode.Success;
                             }
                             else
                             {
-                                c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedBadUsernameOrPassword;
+                                c.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
                             }
                         }
                         else
                         {
-                            c.ReturnCode = MqttConnectReturnCode.ConnectionRefusedIdentifierRejected;
+                            c.ReasonCode = MqttConnectReasonCode.ClientIdentifierNotValid;
                         }
-                    })                    ;
+                    });
 
                 // Start a MQTT server.
                 mqttServer = new MqttFactory().CreateMqttServer();
-                mqttServer.UseApplicationMessageReceivedHandler( MqttServer_ApplicationMessageReceived);
+                mqttServer.UseApplicationMessageReceivedHandler(MqttServer_ApplicationMessageReceived);
                 mqttServer.UseClientConnectedHandler(MqttServer_ClientConnected);
-                mqttServer.UseClientDisconnectedHandler( MqttServer_ClientDisconnected);
+                mqttServer.UseClientDisconnectedHandler(MqttServer_ClientDisconnected);
 
-                _ = mqttServer.StartAsync(optionsBuilder.Build());
+                await mqttServer.StartAsync(optionsBuilder.Build());
                 Console.WriteLine("MQTT服务启动成功！");
             }
         }
 
         private static async Task EndMqttServer()
         {
-            if (mqttServer!=null)
+            if (mqttServer != null)
             {
                 await mqttServer.StopAsync();
             }
@@ -188,7 +188,7 @@ namespace MqttServerTest
                 Console.WriteLine("mqttserver=null");
             }
         }
-        
+
         private static void Usingcertificate(ref MqttServerOptions options)
         {
             var certificate = new X509Certificate(@"C:\certs\test\test.cer", "");
@@ -234,7 +234,7 @@ namespace MqttServerTest
         private static async void Topic_Serialize(string msg)
         {
             string topic = "topic/serialize";
-            
+
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(msg)
