@@ -250,8 +250,8 @@ namespace MqttServerTest
         /// <param name="topic"></param>
         private static void Subscribe(string topic)
         {
-            List<TopicFilter> topicFilter = new List<TopicFilter>();
-            topicFilter.Add(new TopicFilterBuilder()
+            List<MqttTopicFilter> topicFilter = new List<MqttTopicFilter>();
+            topicFilter.Add(new MqttTopicFilterBuilder()
                 .WithTopic(topic)
                 .WithAtMostOnceQoS()
                 .Build());
